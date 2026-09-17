@@ -49,3 +49,12 @@ test('CSV output blocks spreadsheet formulas and quotes commas', () => {
   assert.match(csv, /"1,000 oz"/);
   fs.rmSync(folder, { recursive: true, force: true });
 });
+
+test('agent flags are parsed without enabling raw retention by default', () => {
+  const ordinary = exporter.parseArgs(['--output', 'export']);
+  assert.equal(ordinary.nonInteractive, undefined);
+  assert.equal(ordinary.saveRawResponses, undefined);
+  const agent = exporter.parseArgs(['--output', 'export', '--non-interactive', '--save-raw-responses']);
+  assert.equal(agent.nonInteractive, true);
+  assert.equal(agent.saveRawResponses, true);
+});

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smwitkowski/grocery-spend-lab/schemas/command-result.schema.json",
+  "title": "Grocery Spend Lab command result",
+  "type": "object",
+  "required": ["schema_version", "tool_version", "command", "status", "data", "warnings", "artifacts", "error"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "tool_version": {"type": "string"},
+    "command": {"type": "string"},
+    "status": {"enum": ["completed", "completed_with_warnings", "failed"]},
+    "data": {"type": ["object", "null"]},
+    "warnings": {"type": "array", "items": {"type": "object"}},
+    "artifacts": {"type": "array", "items": {"type": "object"}},
+    "error": {"type": ["object", "null"]}
+  },
+  "additionalProperties": true
+}

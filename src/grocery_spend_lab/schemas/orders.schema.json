@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smwitkowski/grocery-spend-lab/schemas/orders.schema.json",
+  "title": "Normalized grocery orders",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["receipt_key", "purchase_date", "purchase_type", "item_lines", "subtotal_cents", "savings_cents", "tax_cents", "fee_paid_cents", "other_fee_cents", "tip_cents", "total_cents"],
+    "properties": {
+      "receipt_key": {"type": "string", "minLength": 1},
+      "purchase_date": {"type": "string", "format": "date"},
+      "purchase_type": {"type": "string", "minLength": 1},
+      "item_lines": {"type": "integer", "minimum": 0},
+      "subtotal_cents": {"type": ["integer", "null"]},
+      "savings_cents": {"type": ["integer", "null"]},
+      "tax_cents": {"type": ["integer", "null"]},
+      "fee_paid_cents": {"type": ["integer", "null"]},
+      "other_fee_cents": {"type": ["integer", "null"]},
+      "tip_cents": {"type": ["integer", "null"]},
+      "total_cents": {"type": "integer"}
+    },
+    "additionalProperties": true
+  }
+}

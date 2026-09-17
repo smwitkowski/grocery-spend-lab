@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grocery Spend Lab"
+  short_description: "Export and analyze grocery receipt spending"
+  default_prompt: "Analyze grocery receipt exports, preserve evidence boundaries, and return machine-readable artifacts."

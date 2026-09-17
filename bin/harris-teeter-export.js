@@ -3,9 +3,9 @@
  * Export Harris Teeter purchase history from a visible, signed-in Brave window.
  *
  * The exporter uses a dedicated browser profile so cookies never enter the
- * export. It saves normalized orders/items as JSON and CSV, plus the provider's
- * receipt-detail response bodies for future parser improvements. Request
- * headers, cookies, credentials, and telemetry are never written.
+ * export. It saves normalized orders/items as JSON and CSV. Provider response
+ * bodies are opt-in for parser audits. Request headers, cookies, credentials,
+ * and telemetry are never written.
  */
 'use strict';
 
@@ -38,6 +38,8 @@ Options:
   --profile DIR      Dedicated Brave profile (default: ${DEFAULT_PROFILE})
   --browser-path P   Brave/Chromium executable (default: $BRAVE_PATH or macOS Brave)
   --login-timeout N  Minutes to wait for manual sign-in (default: 10)
+  --non-interactive  Fail immediately when the browser profile is not signed in
+  --save-raw-responses  Save provider receipt-detail responses for parser audits
   --help             Show this help
 `);
   process.exit(error ? 2 : 0);
@@ -51,6 +53,8 @@ function parseArgs(argv) {
   ]);
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--help') usage();
+    if (argv[i] === '--non-interactive') { out.nonInteractive = true; continue; }
+    if (argv[i] === '--save-raw-responses') { out.saveRawResponses = true; continue; }
     const key = valued.get(argv[i]);
     if (!key || i + 1 >= argv.length) usage(`Unknown or incomplete option: ${argv[i]}`);
     out[key] = argv[++i];
@@ -89,7 +93,6 @@ function normalizeReceipt(rawDetail, fallback, account, sourcePage) {
   }
   const type = ({ IN_STORE: 'In-store', DELIVERY: 'Delivery', PICKUP: 'Pickup', FUEL: 'Fuel', SHIP: 'Ship' })[detail.purchaseType] || detail.purchaseType;
   const cost = detail.costSummary;
-  const payments = Array.isArray(detail.paymentDetails) ? detail.paymentDetails : [];
   const address = detail.storeInfo?.address || {};
   const order = {
     account, receipt_key: fallback.key, purchase_date: fallback.date, purchase_type: type,
@@ -100,8 +103,7 @@ function normalizeReceipt(rawDetail, fallback, account, sourcePage) {
     tax_cents: cents(cost.totalTax), fee_paid_cents: cents(cost.feePaid),
     other_fee_cents: cents(cost.otherFeeTotal), tip_cents: cents(cost.tipTotal),
     total_cents: cents(cost.total),
-    payment_summary: payments.map(payment => [payment.paymentMethodName, payment.lastFourOfCard, payment.paymentAmount].filter(Boolean).join(' ')).join(' | '),
-    source_page: sourcePage, raw_detail_saved: true,
+    source_page: sourcePage, raw_detail_saved: false,
   };
   const fallbackByUpc = new Map((fallback.items || []).filter(item => item.upc).map(item => [item.upc, item]));
   const items = detail.items.map((item, index) => {
@@ -147,6 +149,16 @@ async function waitForSignIn(page, options) {
   const minutes = options.loginTimeout;
   const deadline = Date.now() + minutes * 60_000;
   await page.goto(PURCHASES_URL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  if (options.nonInteractive) {
+    const ready = await page.locator('a[href*="/mypurchases/detail/"]').first()
+      .waitFor({ state: 'attached', timeout: 10_000 }).then(() => true).catch(() => false);
+    if (!ready) {
+      const error = new Error('A signed-in browser session is required. Run without --non-interactive to sign in visibly.');
+      error.code = 'AUTH_REQUIRED';
+      throw error;
+    }
+    return;
+  }
   while (Date.now() < deadline) {
     if (await page.locator('a[href*="/mypurchases/detail/"]').count()) return;
     const currentLocation = new URL(page.url());
@@ -202,7 +214,7 @@ async function collectReceiptLinks(page) {
   return [...links.values()];
 }
 
-async function scrapeReceipt(page, entry, account, rawDir) {
+async function scrapeReceipt(page, entry, account, rawDir, saveRawResponses) {
   const { key, date } = receiptDate(entry.href);
   let rawDetail = null;
   const onResponse = async response => {
@@ -260,8 +272,9 @@ async function scrapeReceipt(page, entry, account, rawDir) {
     for (let attempt = 0; !rawDetail && attempt < 20; attempt += 1) await page.waitForTimeout(250);
     if (!rawDetail) throw new Error(`Receipt detail response was not captured for ${key}`);
     const rawText = `${JSON.stringify(rawDetail, null, 2)}\n`;
-    fs.writeFileSync(path.join(rawDir, `${key.replace(/[^\w.-]+/g, '_')}.json`), rawText);
+    if (saveRawResponses) fs.writeFileSync(path.join(rawDir, `${key.replace(/[^\w.-]+/g, '_')}.json`), rawText);
     const normalized = normalizeReceipt(rawDetail, captured, account, entry.source_page);
+    normalized.order.raw_detail_saved = Boolean(saveRawResponses);
     normalized.order.source_sha256 = crypto.createHash('sha256').update(rawText).digest('hex');
     return normalized;
   } finally {
@@ -270,6 +283,7 @@ async function scrapeReceipt(page, entry, account, rawDir) {
 }
 
 async function run(options) {
+  let createdOutput = false;
   if (fs.existsSync(options.output)) throw new Error(`Output already exists: ${options.output}`);
   if (!fs.existsSync(options.browserPath)) throw new Error(`Browser executable was not found at ${options.browserPath}`);
   fs.mkdirSync(path.dirname(options.output), { recursive: true });
@@ -290,12 +304,13 @@ async function run(options) {
     });
     if (!selected.length) throw new Error('No receipts matched the requested date range.');
     fs.mkdirSync(options.output, { recursive: false });
+    createdOutput = true;
     const rawDir = path.join(options.output, 'raw-receipt-details');
-    fs.mkdirSync(rawDir);
+    if (options.saveRawResponses) fs.mkdirSync(rawDir);
     const orders = [];
     const items = [];
     for (let i = 0; i < selected.length; i += 1) {
-      const result = await scrapeReceipt(page, selected[i], options.account, rawDir);
+      const result = await scrapeReceipt(page, selected[i], options.account, rawDir, options.saveRawResponses);
       orders.push(result.order);
       items.push(...result.items);
       process.stderr.write(`Exported receipt ${i + 1} of ${selected.length}: ${result.order.purchase_date} ${result.order.receipt_key}\n`);
@@ -305,6 +320,7 @@ async function run(options) {
     writeTable(options.output, 'orders', orders);
     writeTable(options.output, 'items', items);
     const summary = {
+      schema_version: '1.0', tool: 'grocery-spend-export-harris-teeter', status: 'completed',
       provider: 'Harris Teeter', account: options.account, started_at: started,
       completed_at: new Date().toISOString(), requested_start: options.start || null,
       requested_end: options.end || null, history_receipts_indexed: allLinks.length,
@@ -315,13 +331,14 @@ async function run(options) {
       limitations: [
         'The export covers only the signed-in Harris Teeter loyalty account.',
         'The provider may omit older history, prescriptions, refunds, or purchases not attached to this loyalty account.',
+        'Raw provider responses are retained only when --save-raw-responses is supplied; those files may contain partial payment details.',
         'Totals are retailer records and should be reconciled to bank transactions before changing the budget.',
       ],
     };
     fs.writeFileSync(path.join(options.output, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify(summary)}\n`);
   } catch (error) {
-    if (fs.existsSync(options.output)) fs.rmSync(options.output, { recursive: true, force: true });
+    if (createdOutput && fs.existsSync(options.output)) fs.rmSync(options.output, { recursive: true, force: true });
     throw error;
   } finally {
     await context.close();
@@ -330,8 +347,8 @@ async function run(options) {
 
 if (require.main === module) {
   run(parseArgs(process.argv.slice(2))).catch(error => {
-    process.stderr.write(`Export failed: ${error.message}\n`);
-    process.exitCode = 1;
+    process.stdout.write(`${JSON.stringify({schema_version: '1.0', tool: 'grocery-spend-export-harris-teeter', status: 'failed', error: {code: error.code || 'EXPORT_FAILED', message: error.message}})}\n`);
+    process.exitCode = error.code === 'AUTH_REQUIRED' ? 4 : 1;
   });
 }
 

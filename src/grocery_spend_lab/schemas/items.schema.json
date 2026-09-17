@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smwitkowski/grocery-spend-lab/schemas/items.schema.json",
+  "title": "Normalized grocery receipt items",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["receipt_key", "purchase_date", "purchase_type", "description", "size", "upc", "is_weighted", "received", "paid_cents", "savings_cents", "unit_price_paid_cents", "original_unit_price_cents"],
+    "properties": {
+      "receipt_key": {"type": "string", "minLength": 1},
+      "purchase_date": {"type": "string", "format": "date"},
+      "purchase_type": {"type": "string", "minLength": 1},
+      "description": {"type": ["string", "null"]},
+      "size": {"type": ["string", "null"]},
+      "upc": {"type": ["string", "null"]},
+      "is_weighted": {"type": "boolean"},
+      "received": {"type": ["number", "null"]},
+      "paid_cents": {"type": ["integer", "null"]},
+      "savings_cents": {"type": ["integer", "null"]},
+      "unit_price_paid_cents": {"type": ["integer", "null"]},
+      "original_unit_price_cents": {"type": ["integer", "null"]}
+    },
+    "additionalProperties": true
+  }
+}

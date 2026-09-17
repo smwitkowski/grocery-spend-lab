@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import re
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -13,6 +15,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+
+from . import __version__
+from .validation import SCHEMA_VERSION, validate_inputs
 
 PALETTE = {
     "navy": "#17324D", "blue": "#4178A6", "sky": "#A9C9DE", "teal": "#3B8C88",
@@ -148,7 +153,7 @@ def savefig(path: Path, rect=None):
     plt.close()
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--orders", required=True, type=Path)
     parser.add_argument("--items", required=True, type=Path)
@@ -158,9 +163,25 @@ def main():
     parser.add_argument("--receipt-links-indexed", type=int)
     parser.add_argument("--event-date", type=pd.Timestamp)
     parser.add_argument("--event-label", default="Event")
-    args = parser.parse_args()
-    if args.output.exists():
-        raise SystemExit(f"Output already exists: {args.output}")
+    args = parser.parse_args(argv)
+    validation = validate_inputs(args.orders, args.items)
+    if not validation["valid"]:
+        failure = {"schema_version": SCHEMA_VERSION, "tool_version": __version__, "command": "analyze",
+                   "status": "failed", "data": None, "warnings": validation["warnings"], "artifacts": [],
+                   "error": {"code": "INVALID_INPUT", "message": "Input validation failed.",
+                             "details": validation["errors"]}}
+        print(json.dumps(failure))
+        raise SystemExit(3)
+    requested_output = args.output.resolve()
+    if requested_output.exists():
+        failure = {"schema_version": SCHEMA_VERSION, "tool_version": __version__, "command": "analyze",
+                   "status": "failed", "data": None, "warnings": [], "artifacts": [],
+                   "error": {"code": "OUTPUT_CONFLICT", "message": f"Output already exists: {requested_output}", "details": []}}
+        print(json.dumps(failure))
+        raise SystemExit(5)
+    validation_warnings = [{"code": "INPUT_WARNING", "message": message} for message in validation["warnings"]]
+    requested_output.parent.mkdir(parents=True, exist_ok=True)
+    args.output = Path(tempfile.mkdtemp(prefix=f".{requested_output.name}.tmp-", dir=requested_output.parent))
     data_dir = args.output / "data"
     chart_dir = args.output / "charts"
     data_dir.mkdir(parents=True)
@@ -491,7 +512,39 @@ def main():
         f"Generated from {args.account_label}. `data/` contains auditable derived tables and `charts/` contains report-ready figures. "
         "The analysis excludes zero-received lines from purchase incidence and retains unknown categories/descriptions. See `analysis_summary.json` for coverage and limitations.\n"
     )
-    print(json.dumps({"receipts": len(orders), "fulfilled_lines": fulfilled_total, "charts": 8, "exceptions": len(exceptions), "output": str(args.output)}))
+    artifact_paths = sorted(path for path in args.output.rglob("*") if path.is_file())
+    artifacts = []
+    for path in artifact_paths:
+        relative = str(path.relative_to(args.output))
+        media_type = "image/png" if path.suffix == ".png" else "text/csv" if path.suffix == ".csv" else "application/json" if path.suffix == ".json" else "text/markdown"
+        role = "summary" if relative == "analysis_summary.json" else "chart" if path.suffix == ".png" else "data" if path.suffix == ".csv" else "documentation"
+        artifacts.append({"role": role, "path": relative, "media_type": media_type,
+                          "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+    warnings = validation_warnings
+    if len(exceptions):
+        warnings.append({"code": "RECONCILIATION_RESIDUAL", "count": len(exceptions),
+                         "details_artifact": "data/reconciliation_exceptions.csv"})
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "tool_version": __version__,
+        "command": "analyze",
+        "status": "completed_with_warnings" if warnings else "completed",
+        "data": {"output": str(requested_output), "receipts": len(orders), "fulfilled_lines": fulfilled_total,
+                 "charts": 8, "reconciliation_exceptions": len(exceptions)},
+        "inputs": {
+            "orders": {"path": str(args.orders), "sha256": hashlib.sha256(args.orders.read_bytes()).hexdigest()},
+            "items": {"path": str(args.items), "sha256": hashlib.sha256(args.items.read_bytes()).hexdigest()},
+        },
+        "options": {"merchant": args.merchant, "account_label": args.account_label,
+                    "event_date": args.event_date.date().isoformat() if args.event_date is not None else None,
+                    "event_label": args.event_label if args.event_date is not None else None},
+        "warnings": warnings,
+        "artifacts": artifacts,
+        "error": None,
+    }
+    (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n")
+    args.output.replace(requested_output)
+    print(json.dumps(manifest, allow_nan=False))
 
 
 if __name__ == "__main__":

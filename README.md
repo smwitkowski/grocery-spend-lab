@@ -11,14 +11,36 @@ identification, explicit product attributes, and milk/egg purchase consistency.
 It does not claim that a markdown was a good deal, assign objective food quality,
 or estimate market inflation.
 
-## Install
+## Install the analysis CLI
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -e .
+```
+
+Install the browser exporter only when you need to collect Harris Teeter data:
+
+```bash
 npm install
 ```
+
+## Agent use
+
+The repository ships a portable Agent Skill at
+[`skills/grocery-spend-lab/SKILL.md`](skills/grocery-spend-lab/SKILL.md). The
+CLI has stable JSON discovery, validation, and result contracts:
+
+```bash
+grocery-spend capabilities
+grocery-spend schema --name command-result
+grocery-spend validate --orders examples/orders.json --items examples/items.json
+```
+
+Every completed analysis includes `manifest.json` with input hashes, options,
+warnings, artifact hashes, and aggregate counts. See
+[`docs/agent-interface.md`](docs/agent-interface.md) for the contract and design
+sources.
 
 ## Export Harris Teeter history
 
@@ -27,7 +49,7 @@ Sign in yourself, then leave the purchase-history page open while it indexes and
 exports receipts.
 
 ```bash
-node bin/harris-teeter-export.js \
+npx --no-install grocery-spend-export-harris-teeter \
   --output exports/ht-2026-09-16 \
   --account household-1 \
   --start 2026-01-01
@@ -35,12 +57,14 @@ node bin/harris-teeter-export.js \
 
 Set `BRAVE_PATH` or pass `--browser-path` for another Chromium executable. The
 exporter writes normalized JSON/CSV plus provider response bodies for parser
-auditability. It does not write credentials, cookies, or request headers.
+auditability when `--save-raw-responses` is supplied. It does not write
+credentials, cookies, or request headers. Agents should use `--non-interactive`
+so a missing login returns immediately with `AUTH_REQUIRED` instead of waiting.
 
 ## Analyze an export
 
 ```bash
-grocery-spend \
+grocery-spend analyze \
   --orders exports/ht-2026-09-16/orders.json \
   --items exports/ht-2026-09-16/items.json \
   --output outputs/analysis-2026-09-16 \

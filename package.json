@@ -1,9 +1,12 @@
 {
   "name": "grocery-spend-lab-exporters",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Browser exporters for grocery-spend-lab",
   "license": "MIT",
+  "bin": {
+    "grocery-spend-export-harris-teeter": "bin/harris-teeter-export.js"
+  },
   "scripts": {
     "test": "node --test tests/test-harris-teeter-export.js"
   },
