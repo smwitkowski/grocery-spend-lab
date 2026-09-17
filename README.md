@@ -1,50 +1,74 @@
+<img src="docs/assets/grocery-spend-lab-icon.png" alt="Grocery Spend Lab receipt icon" width="104">
+
 # Grocery Spend Lab
 
-Grocery Spend Lab is a local-first toolkit for turning itemized retailer
-receipts into auditable spending tables and clear charts. It includes a visible
-browser exporter for Harris Teeter and a retailer-agnostic analyzer for the
-normalized JSON schema in [`docs/input-schema.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/docs/input-schema.md).
+**Analyze your grocery purchase history locally.**
 
-The project measures category mix, provider-recorded markdown incidence,
-delivery fees and tips, basket cadence, exact-UPC price observations, brand
-identification, explicit product attributes, and milk/egg purchase consistency.
-It does not claim that a markdown was a good deal, assign objective food quality,
-or estimate market inflation.
+Grocery Spend Lab turns itemized receipts into spending charts and inspectable
+tables. It includes a visible-browser exporter for Harris Teeter and an offline
+Python analyzer for the documented [JSON input format](docs/input-schema.md).
 
-## Install the analysis CLI
+[Try the synthetic example](#try-the-synthetic-example) ·
+[Export Harris Teeter history](#export-harris-teeter-history) ·
+[Use it with an agent](#agent-use)
 
-After the first PyPI release, run it without a permanent install:
+<img src="docs/assets/example-category-spending.png" alt="Example category-spending chart generated from synthetic grocery receipts" width="860">
+
+*Example output generated from the repository's synthetic receipts.*
+
+## What it shows
+
+- Spending by category and month.
+- Delivery fees, tips, and basket patterns.
+- Retailer-recorded markdown incidence.
+- Exact-UPC observations for repeatedly purchased products.
+- Brand, product-attribute, and milk/egg purchase patterns.
+- Reconciliation exceptions and the tables behind every chart.
+
+Reports cover the retailer history you supply, not all household grocery
+spending. Categories and attributes use deterministic text rules, and savings
+are retailer labels rather than proof of deal quality. Exact-UPC observations
+are not a market inflation index.
+
+## Install from source
+
+Install the Python analyzer from a source checkout:
+
+```bash
+git clone https://github.com/smwitkowski/grocery-spend-lab.git
+cd grocery-spend-lab
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .
+```
+
+The Python analyzer is prepared for PyPI distribution. After the first release,
+it will also run without a permanent install:
 
 ```bash
 uvx grocery-spend-lab --version
 pipx run grocery-spend-lab --version
 ```
 
-Or install it as an isolated command:
+## Try the synthetic example
+
+The included fixtures contain no household data:
 
 ```bash
-uv tool install grocery-spend-lab
-# or: pipx install grocery-spend-lab
+grocery-spend analyze \
+  --orders examples/orders.json \
+  --items examples/items.json \
+  --output outputs/example \
+  --merchant "Example Market"
 ```
 
-To work from a source checkout:
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .
-```
-
-Install the browser exporter only when you need to collect Harris Teeter data:
-
-```bash
-npm install
-```
+The new output directory contains an analysis summary, auditable CSV tables,
+eight PNG charts, reconciliation exceptions, and a hashed `manifest.json`.
 
 ## Agent use
 
 The repository ships a portable Agent Skill at
-[`skills/grocery-spend-lab/SKILL.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/skills/grocery-spend-lab/SKILL.md). The
+[`skills/grocery-spend-lab/SKILL.md`](skills/grocery-spend-lab/SKILL.md). The
 CLI has stable JSON discovery, validation, and result contracts:
 
 ```bash
@@ -54,15 +78,22 @@ grocery-spend validate --orders examples/orders.json --items examples/items.json
 ```
 
 Every completed analysis includes `manifest.json` with input hashes, options,
-warnings, artifact hashes, and aggregate counts. See
-[`docs/agent-interface.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/docs/agent-interface.md) for the contract and design
-sources.
+warnings, artifact hashes, and aggregate counts. See the
+[agent interface](docs/agent-interface.md) for the complete contract.
 
 ## Export Harris Teeter history
 
-The exporter launches a visible Brave window with a dedicated browser profile.
-Sign in yourself, then leave the purchase-history page open while it indexes and
-exports receipts.
+The exporter launches a visible Brave or Chromium window with a dedicated
+browser profile. Sign in yourself, then leave the purchase-history page open
+while the tool indexes and exports receipts. It uses the requests made by the
+signed-in webpage; credentials, cookies, and request headers are not included in
+the export.
+
+Install its Node dependency from the repository first:
+
+```bash
+npm install
+```
 
 ```bash
 npx --no-install grocery-spend-export-harris-teeter \
@@ -72,10 +103,11 @@ npx --no-install grocery-spend-export-harris-teeter \
 ```
 
 Set `BRAVE_PATH` or pass `--browser-path` for another Chromium executable. The
-exporter writes normalized JSON/CSV plus provider response bodies for parser
-auditability when `--save-raw-responses` is supplied. It does not write
-credentials, cookies, or request headers. Agents should use `--non-interactive`
-so a missing login returns immediately with `AUTH_REQUIRED` instead of waiting.
+exporter writes normalized JSON and CSV. Provider response bodies are saved for
+parser audits only when `--save-raw-responses` is supplied; those files may
+contain sensitive account or payment details. Agents should use
+`--non-interactive` so a missing login returns immediately with `AUTH_REQUIRED`
+instead of waiting.
 
 ## Analyze an export
 
@@ -90,18 +122,12 @@ grocery-spend analyze \
   --event-label "Move"
 ```
 
-The output directory must be new. It contains an analysis summary, auditable
-CSV tables, eight PNG charts, and reconciliation exceptions. Try the included
-synthetic data without exposing household information:
-
-```bash
-grocery-spend --orders examples/orders.json --items examples/items.json \
-  --output outputs/example --merchant "Example Market"
-```
+The output directory must be new. A completed run writes its manifest last and
+never overwrites an earlier analysis.
 
 ## Interpretation limits
 
-- Coverage is one retailer export, not total household grocery spending.
+- Coverage is the supplied retailer export, not total household grocery spending.
 - Categories and brand types are deterministic text rules. `Brand unclear`
   stays separate instead of being guessed.
 - Savings are labels supplied by the retailer. The tool measures incidence and
