@@ -1,6 +1,4 @@
-<img src="docs/assets/grocery-spend-lab-icon.png" alt="Grocery Spend Lab receipt icon" width="104">
-
-# Grocery Spend Lab
+<h1><img src="docs/assets/grocery-spend-lab-icon.png" alt="" width="64" align="absmiddle"> Grocery Spending</h1>
 
 **Analyze your grocery purchase history locally.**
 
@@ -15,6 +13,30 @@ Python analyzer for the documented [JSON input format](docs/input-schema.md).
 <img src="docs/assets/example-category-spending.png" alt="Example category-spending chart generated from synthetic grocery receipts" width="860">
 
 *Example output generated from the repository's synthetic receipts.*
+
+## Example report
+
+The synthetic example models 12 receipts and 36 fulfilled item lines across six
+months. It produces eight charts, auditable CSV tables, an analysis summary, and
+a manifest containing input and artifact hashes.
+
+| Captured history | Total | Channels | Reconciliation exceptions |
+|---|---:|---|---:|
+| Jan–Jun 2026 · 12 receipts | $179.98 | 9 in-store · 3 delivery | 0 |
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/example-monthly-spending.png" alt="Synthetic monthly spending split into merchandise, tax, and fees or tips"><br><sub>Monthly spending composition</sub></td>
+    <td width="50%"><img src="docs/assets/example-shopping-cadence.png" alt="Synthetic shopping timeline showing delivery and in-store basket totals"><br><sub>Shopping cadence and basket size</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/example-repeat-item-prices.png" alt="Synthetic repeat-product price observations for milk, eggs, and bananas"><br><sub>Exact-UPC price observations; coral points had retailer-recorded savings</sub></td>
+  </tr>
+</table>
+
+[See the full synthetic example report](docs/example-report.md), including
+delivery costs, markdown incidence, staple cadence, methodology, and the audit
+trail behind the charts.
 
 ## What it shows
 

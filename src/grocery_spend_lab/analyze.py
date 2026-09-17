@@ -373,7 +373,7 @@ def main(argv: list[str] | None = None):
     ax.set_ylabel("Captured dollars")
     ax.yaxis.set_major_formatter(lambda v, _: f"${v:,.0f}")
     ax.legend(frameon=False, ncol=3, loc="upper left", bbox_to_anchor=(0, -0.14))
-    style_axes(ax, "Captured spending by month", "January and September are partial; February has one receipt")
+    style_axes(ax, "Captured spending by month", "Merchandise, tax, and fees or tips recorded in the supplied history")
     savefig(chart_dir / "01_monthly_spending.png")
 
     # Category spend.
