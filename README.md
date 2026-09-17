@@ -3,7 +3,7 @@
 Grocery Spend Lab is a local-first toolkit for turning itemized retailer
 receipts into auditable spending tables and clear charts. It includes a visible
 browser exporter for Harris Teeter and a retailer-agnostic analyzer for the
-normalized JSON schema in [`docs/input-schema.md`](docs/input-schema.md).
+normalized JSON schema in [`docs/input-schema.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/docs/input-schema.md).
 
 The project measures category mix, provider-recorded markdown incidence,
 delivery fees and tips, basket cadence, exact-UPC price observations, brand
@@ -12,6 +12,22 @@ It does not claim that a markdown was a good deal, assign objective food quality
 or estimate market inflation.
 
 ## Install the analysis CLI
+
+After the first PyPI release, run it without a permanent install:
+
+```bash
+uvx grocery-spend-lab --version
+pipx run grocery-spend-lab --version
+```
+
+Or install it as an isolated command:
+
+```bash
+uv tool install grocery-spend-lab
+# or: pipx install grocery-spend-lab
+```
+
+To work from a source checkout:
 
 ```bash
 python3 -m venv .venv
@@ -28,7 +44,7 @@ npm install
 ## Agent use
 
 The repository ships a portable Agent Skill at
-[`skills/grocery-spend-lab/SKILL.md`](skills/grocery-spend-lab/SKILL.md). The
+[`skills/grocery-spend-lab/SKILL.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/skills/grocery-spend-lab/SKILL.md). The
 CLI has stable JSON discovery, validation, and result contracts:
 
 ```bash
@@ -39,7 +55,7 @@ grocery-spend validate --orders examples/orders.json --items examples/items.json
 
 Every completed analysis includes `manifest.json` with input hashes, options,
 warnings, artifact hashes, and aggregate counts. See
-[`docs/agent-interface.md`](docs/agent-interface.md) for the contract and design
+[`docs/agent-interface.md`](https://github.com/smwitkowski/grocery-spend-lab/blob/main/docs/agent-interface.md) for the contract and design
 sources.
 
 ## Export Harris Teeter history

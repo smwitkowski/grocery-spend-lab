@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,8 +8,22 @@ version = "0.2.0"
 description = "Local-first grocery receipt export and spending analysis"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Stephen Witkowski" }]
+keywords = ["agent", "budget", "cli", "grocery", "receipts", "spending"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Office/Business :: Financial",
+]
 dependencies = [
   "matplotlib>=3.8,<4",
   "numpy>=1.26,<3",
@@ -19,6 +33,15 @@ dependencies = [
 
 [project.scripts]
 grocery-spend = "grocery_spend_lab.cli:main"
+
+[project.entry-points."pipx.run"]
+grocery-spend-lab = "grocery_spend_lab.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/smwitkowski/grocery-spend-lab"
+Repository = "https://github.com/smwitkowski/grocery-spend-lab.git"
+Issues = "https://github.com/smwitkowski/grocery-spend-lab/issues"
+Changelog = "https://github.com/smwitkowski/grocery-spend-lab/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
