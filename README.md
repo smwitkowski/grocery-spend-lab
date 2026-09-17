@@ -16,13 +16,15 @@ Python analyzer for the documented [JSON input format](docs/input-schema.md).
 
 ## Example report
 
-The synthetic example models 12 receipts and 36 fulfilled item lines across six
-months. It produces eight charts, auditable CSV tables, an analysis summary, and
-a manifest containing input and artifact hashes.
+The synthetic example models 51 receipts and 847 fulfilled item lines across a
+full year. Basket size, channel, categories, quantities, markdowns, missed
+items, delivery costs, and repeat-product prices all vary. The run produces
+eight charts, auditable CSV tables, an analysis summary, and a manifest
+containing input and artifact hashes.
 
 | Captured history | Total | Channels | Reconciliation exceptions |
 |---|---:|---|---:|
-| Jan–Jun 2026 · 12 receipts | $179.98 | 9 in-store · 3 delivery | 0 |
+| Jan–Dec 2025 · 51 receipts | $4,648.48 | 33 in-store · 13 delivery · 5 pickup | 0 |
 
 <table>
   <tr>
@@ -74,7 +76,8 @@ pipx run grocery-spend-lab --version
 
 ## Try the synthetic example
 
-The included fixtures contain no household data:
+The included fixtures are [deterministically generated](examples/README.md) and
+contain no household data:
 
 ```bash
 grocery-spend analyze \

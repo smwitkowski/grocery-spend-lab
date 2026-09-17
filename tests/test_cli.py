@@ -1,6 +1,9 @@
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 from grocery_spend_lab.cli import CAPABILITIES
@@ -18,8 +21,33 @@ class AgentContractTests(unittest.TestCase):
     def test_synthetic_examples_validate(self):
         result = validate_inputs(ROOT / "examples/orders.json", ROOT / "examples/items.json")
         self.assertTrue(result["valid"], result["errors"])
-        self.assertEqual(result["orders"]["rows"], 12)
-        self.assertEqual(result["items"]["rows"], 36)
+        self.assertGreaterEqual(result["orders"]["rows"], 40)
+        self.assertGreaterEqual(result["items"]["rows"], 500)
+        self.assertGreaterEqual(
+            (date.fromisoformat(result["orders"]["date_end"]) - date.fromisoformat(result["orders"]["date_start"])).days,
+            330,
+        )
+
+    def test_synthetic_examples_are_reproducible(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            orders = folder / "orders.json"
+            items = folder / "items.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/generate_synthetic_examples.py"),
+                    "--orders", str(orders),
+                    "--items", str(items),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(orders.read_bytes(), (ROOT / "examples/orders.json").read_bytes())
+            self.assertEqual(items.read_bytes(), (ROOT / "examples/items.json").read_bytes())
 
     def test_orphan_item_blocks_analysis(self):
         with tempfile.TemporaryDirectory() as folder:

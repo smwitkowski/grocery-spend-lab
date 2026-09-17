@@ -10,6 +10,7 @@ All notable changes to Grocery Spend Lab are documented here. Releases follow
 - Added a portable Agent Skill with privacy and interpretation guidance.
 - Added unattended Harris Teeter export preflight and opt-in raw-response retention.
 - Added a repository icon and synthetic example report gallery to the project overview.
+- Replaced the small toy fixture with a reproducible, varied full-year synthetic history.
 
 ## 0.1.0 - 2026-09-16
 
